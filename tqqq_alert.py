@@ -9,6 +9,7 @@
 """
 import os
 import sys
+import time
 
 import requests
 import yfinance as yf
@@ -19,12 +20,21 @@ MA_WINDOW = 200
 def send_telegram(text: str) -> None:
     token = os.environ["TELEGRAM_BOT_TOKEN"]
     chat_id = os.environ["TELEGRAM_CHAT_ID"]
-    r = requests.post(
-        f"https://api.telegram.org/bot{token}/sendMessage",
-        data={"chat_id": chat_id, "text": text},
-        timeout=15,
-    )
-    r.raise_for_status()
+    last_err = None
+    for attempt in range(4):
+        try:
+            r = requests.post(
+                f"https://api.telegram.org/bot{token}/sendMessage",
+                data={"chat_id": chat_id, "text": text},
+                timeout=30,
+            )
+            r.raise_for_status()
+            return
+        except requests.RequestException as e:
+            last_err = e
+            print(f"텔레그램 전송 실패({attempt + 1}/4): {type(e).__name__}", file=sys.stderr)
+            time.sleep(2 ** attempt * 2)
+    raise last_err
 
 
 def main() -> int:
