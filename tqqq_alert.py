@@ -28,8 +28,13 @@ def send_telegram(text: str) -> None:
                 data={"chat_id": chat_id, "text": text},
                 timeout=30,
             )
+            if r.status_code == 200:
+                return
+            if 400 <= r.status_code < 500:
+                # 토큰/chat id 문제는 재시도해도 소용없으므로 사유만 출력하고 종료
+                print(f"텔레그램 오류 {r.status_code}: {r.text}", file=sys.stderr)
+                raise SystemExit(1)
             r.raise_for_status()
-            return
         except requests.RequestException as e:
             last_err = e
             print(f"텔레그램 전송 실패({attempt + 1}/4): {type(e).__name__}", file=sys.stderr)
